@@ -1,0 +1,280 @@
+---
+title: "Stat295 Homework"
+author: "Kemal Doğu Oktay, Furkan Kazancıoğlu, Sefa Bulut"
+date: "2024-04-20"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Homework-1
+
+This is Stat295 Homework-1. ID of Group Members : 2502250, 2502185, 2561116
+
+## Question 1
+
+```{r question 1}
+# wget https://raw.githubusercontent.com/dhavalpotdar/College-Scorecard-Data-Analysis/master/MERGED_2017_2018_cleaned.csv
+
+# mv MERGED_2017_2018_cleaned.csv  college_score.csv
+
+# sed -n '10,60p' college_score.csv
+
+# awk -F',' '$8=="Public" && $3=="Montgomery" {print}' college_score.csv > subsample.csv
+
+# awk -F ',' 'NR > 1 {print $3}' college_score.csv | sort | uniq -c | sort -nr
+```
+
+## Question 2
+
+```{r question 2}
+library(tidyverse)
+library(magrittr)
+library(readr)
+
+url <- "https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-01-18/chocolate.csv"
+chocolate <- read_csv(url)
+#Q2 i
+head(chocolate)
+str(chocolate)
+
+# Q2 ii
+chocolate <- chocolate %>%
+  mutate_if(is.character, as.factor)
+
+
+# iii
+stats_by_location <- chocolate %>%
+  group_by(company_location) %>%
+  summarise(
+    MeanRating = mean(rating, na.rm = TRUE),
+    SDRating = sd(rating, na.rm = TRUE),
+    MedianRating = median(rating, na.rm = TRUE),
+    RangeRating = max(rating, na.rm = TRUE) - min(rating, na.rm = TRUE)
+  ) %>%
+  arrange(company_location)  
+
+head(stats_by_location, 10)
+#The mean ratings (MeanRating column) vary across different company locations, ranging from 3.10 to 3.75.
+#The standard deviation (SDRating column) measures the spread or variability of ratings within each location.
+#The median ratings (MedianRating column) provide another measure of central tendency that is less affected by extreme values.
+#The range of ratings (RangeRating column) shows the difference between the maximum and minimum ratings within each location.
+
+# iv
+colombian_chocolates_2020 <- chocolate %>%
+  subset(review_date == 2020 & country_of_bean_origin == "Colombia")
+colombian_chocolates_2020
+
+# v
+mean_ratings_cocoa_by_location <- chocolate %>%
+  mutate(cocoa_percent_numeric = as.numeric(gsub("%", "", cocoa_percent))) %>%
+  group_by(company_location) %>%
+  summarise(
+    MeanRating = mean(rating, na.rm = TRUE),
+    MeanCocoaPercent = mean(cocoa_percent_numeric, na.rm = TRUE)
+  ) %>%
+  ungroup() 
+
+print(mean_ratings_cocoa_by_location)
+
+
+# vi
+selected_columns <- chocolate %>%
+  select(company_manufacturer, company_location, country_of_bean_origin) %>%
+  head(10)
+print(selected_columns)
+
+# vii
+swiss_chocolates <- chocolate %>%
+  filter(company_location == "Switzerland", rating >= 3.25, rating <= 3.5) %>%
+  head(5)
+print(swiss_chocolates)
+
+# viii
+mean_rating_by_location <- chocolate %>%
+  group_by(company_location) %>%
+  summarise(MeanRating2 = mean(rating, na.rm = TRUE)) %>%
+  arrange(desc(MeanRating2))
+
+print(mean_rating_by_location)
+
+# ix
+bonnat_counts <- chocolate %>%
+  filter(company_manufacturer == "Bonnat") %>%
+  group_by(country_of_bean_origin) %>%
+  summarise(ObservationCount = n())
+print(bonnat_counts)
+
+# x
+chocolate <- chocolate %>%
+  mutate(RatingPercentage = rating * 25)
+
+chocolate2 <- chocolate %>%
+  select(RatingPercentage)
+chocolate2
+
+chocolate <- chocolate %>%
+  mutate(Class = case_when(
+    RatingPercentage < 25 ~ "Low",
+    RatingPercentage >= 25 & RatingPercentage < 50 ~ "Medium",
+    RatingPercentage >= 50 & RatingPercentage < 87.5 ~ "Tasty",
+    RatingPercentage >= 87.5 ~ "Excellent"
+  ))
+
+chocolate3 <- chocolate %>%
+  select(Class)
+chocolate3
+
+```
+
+## Question 3
+
+```{r question 3}
+# Question 3
+
+# necessary libraries are loaded
+library(ggplot2)
+library(dplyr)
+library(lubridate)
+
+# i
+
+# the data set is readed 
+
+nmmaps <- read.csv("\\Users\\Lenovo\\Downloads\\chicago-nmmaps-custom.csv")
+
+# I converted date to Date type and i extracted the year
+
+nmmaps$date <- as.Date(nmmaps$date, format = "%Y-%m-%d")
+nmmaps$year <- year(nmmaps$date)
+
+# Plot temperature by date, faceted by year
+
+ggplot(nmmaps, aes(x = date, y = temp)) +
+  geom_smooth()+
+  geom_line() +
+  facet_wrap(~ year, scales = "free_x", labeller = label_both) +
+  labs(title = "The Relationship Between Date and Temp Based on the Year", x = "Date", y = "Temperature")
+
+# part 1) In each year, temperatures go high middle of the year and cool down beginning and end of the year.
+
+# ii
+
+# Defined seasons based on month
+
+nmmaps$season <- factor(cut(month(nmmaps$date),
+                            breaks = c(0, 3, 6, 9, 12),
+                            labels = c("Winter", "Spring", "Summer", "Fall"),
+                            include.lowest = TRUE))
+
+# Plot: temperature by date. I colored the seasons one by one.
+
+ggplot(nmmaps, aes(x = date, y = temp, color = season)) +
+  geom_point(alpha = 0.5) +
+  labs(title = "Temperature by Date and Season", x = "Date", y = "Temperature")
+
+# part 2) Winter and Spring seasons have a positive linear relationship while summer and fall have the contrary. Between years, there are no dramatic changes. In three years winter has the lowest temperature.
+
+# iii
+
+# Calculated the correlation between temperature and dewpoint
+correlation <- cor(nmmaps$temp, nmmaps$dewpoint, use = "complete.obs")
+print(paste("Correlation between temperature and dewpoint:", correlation))
+
+# Plot: temperature against dewpoint
+
+ggplot(nmmaps, aes(x = temp, y = dewpoint)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", col = "blue") +
+  labs(title = "Relationship Between Temperature and Dewpoint", x = "Temperature", y = "Dewpoint")
+
+# part 3) Temperature and dew point have a strong linear relationship.
+
+```
+
+## Question 4.1
+
+```{r question 4.1}
+#Web Scrapping
+
+libraries <- c("ggplot2","sf","rworldmap","tidyverse","magrittr",
+               "leaflet", "dplyr", "rvest", "xml2","rvest",
+               "maps","mapdata","RgoogleMaps","lubridate","rnaturalearth","dplyr","rnaturalearthdata","RColorBrewer","httr")
+lapply(libraries, require, character.only = TRUE)
+
+url <- "https://ds.iris.edu/seismon/eventlist/index.phtml"
+
+res <- GET(url)
+html_con <- content(res, "text")
+
+html_ulke <- read_html(html_con)
+
+tables <- html_ulke |> 
+  html_nodes("table") |> 
+  html_table()
+earthquake <- as.data.frame(tables)
+
+earthquake %<>%
+  mutate(Class = ifelse(MAG < 2, "Minor",
+                        ifelse(MAG < 3, "Light", "Moderate")))
+color_vector <- colorFactor(c("Gold", "Blue", "Dark Red"),
+                            domain = earthquake$Class)
+
+earthquake |> 
+  leaflet() |> 
+  addTiles() |> 
+  addCircles(~LON, ~LAT,
+             weight = 10,
+             radius = 120,
+             popup = paste0(
+               "<b>Date: </b>",
+               earthquake$DATE.and.TIME..UTC.,
+               "<br>",
+               "<b>Place: </b>",
+               earthquake$LOCATION..U.00A0..U.00A0...........................U.00A0..U.00A0..U.00A0..Shows.interactive.map.,
+               "<br>",
+               "<b>Depth in km: </b>",
+               earthquake$DEPTHkm,
+               "<br>",
+               "<b>Magnitude: </b>",
+               earthquake$MAG),
+             color = ~color_vector(Class)) |> 
+  setView(lng = median(earthquake$LON),
+          lat = median(earthquake$LAT),
+          zoom = 6)
+
+
+```
+## Question 4.2
+
+```{r question 4.2}
+library(rvest)
+library(stringr)
+library(leaflet)
+library(magrittr)
+library(dplyr)
+
+station <- read.csv("https://data.ibb.gov.tr/dataset/271839be-25be-479b-abde-ec23f242ef2a/resource/5625860c-d79a-446f-898e-2aa2b9099bc8/download/fuel_station.csv")
+head(station)
+
+opetharita <- station %>%
+  filter(akaryakit_dagitim_sirketi_tnm == "Opet")
+
+opetharita <- opetharita %>%
+  filter(!is.na(latitude), !is.na(longtitude))
+
+leaflet(data = opetharita) %>%
+  addProviderTiles("Esri") %>%
+  addMarkers(lng = ~latitude, lat = ~longtitude,
+             label = ~adi,
+             popup = paste0(
+               "<b> İstasyon İsmi: </b>", opetharita$adi,
+               "<br><b> Dağıtım Şirketi: </b>", opetharita$akaryakit_dagitim_sirketi_tnm,
+               "<br><b> İlce: </b>", opetharita$ilce),
+             icon = leaflet::makeIcon(iconUrl = "https://leafletjs.com/examples/custom-icons/leaf-red.png",
+                                      iconWidth = 16, iconHeight = 16))
+```
